@@ -53,6 +53,7 @@ button.danger{color:var(--bad)}
 .mic.listening{color:var(--ok)}
 .mic.quiet,.mic.restarting{color:var(--warn)}
 .mic.blocked,.mic.unsupported{color:var(--bad)}
+.mic.moved .dot{box-shadow:0 0 0 6px color-mix(in srgb,var(--ok) 35%,transparent)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
 .field{display:flex;flex-direction:column;justify-content:center;gap:clamp(14px,3vh,34px);min-height:0;max-width:1100px;width:100%;margin:0 auto;cursor:pointer}
@@ -165,13 +166,15 @@ label.check{display:flex;gap:10px;align-items:center;font-size:16px;margin:8px 0
 
   <div class="pane" id="pane-mic" hidden>
     <h2>Does this phone hear me?</h2>
-    <p>Tap <b>Start</b>, say a few sentences from the sermon (names too: Zacchaeus, Jericho, sycamore, El Roi), and watch the words appear. Then tap <b>Copy report</b> and send it to Claude.</p>
+    <p>Tap <b>Start</b>, say a few sentences from the sermon (names too: Zacchaeus, Jericho, sycamore, El Roi), and watch the words appear. Watch the big screen follow you (close this menu first, or watch the log below). Then tap <b>Copy report</b> and send it to Claude.</p>
     <div class="row2">
       <button class="primary" id="micToggle">Start</button>
       <button id="copyDiag">Copy report</button>
       <button id="clearHeard">Clear</button>
     </div>
     <div class="transcript" id="transcript"></div>
+    <h2>Following</h2>
+    <pre class="diag" id="followLog">No voice moves yet.</pre>
     <h2>Report</h2>
     <pre class="diag" id="diag"></pre>
   </div>
@@ -180,9 +183,11 @@ label.check{display:flex;gap:10px;align-items:center;font-size:16px;margin:8px 0
     <h2>How to use it</h2>
     <p>Tap the right side of the screen for the next line, the left side to go back. A Bluetooth page-turner or keyboard works too (arrow keys, space, Page Up / Page Down).</p>
     <p>Gold lines are a build. The last line of a build says <b>Land it</b>. A short blue mark above the line means a new paragraph.</p>
-    <p><b>Listen</b> turns the microphone on. In this version it only shows what it hears, so you can check the phone understands you. Following by voice comes in the next step.</p>
+    <p><b>Listen</b> turns the microphone on and the screen follows your voice: when you finish a line, the next one comes up. If you skip ahead, it finds you within a few lines. If you riff or repeat, it waits. A tap always wins.</p>
+    <p>If it ever sits still, tap. If it ever moves wrong, tap back. It never moves backwards by itself.</p>
     <p>Your place and text size are remembered on this phone. The screen stays awake while the page is open.</p>
     <h2>Settings</h2>
+    <label class="check"><input type="checkbox" id="followOn" checked> Follow my voice (move the line by itself)</label>
     <label class="check"><input type="checkbox" id="showHeard" checked> Show the words it hears under the line</label>
     <div class="row2"><button id="resetPlace">Forget my place in this sermon</button></div>
     <p id="version" style="color:var(--dim);font-size:13px"></p>
@@ -191,6 +196,7 @@ label.check{display:flex;gap:10px;align-items:center;font-size:16px;margin:8px 0
 <div class="toast" id="toast" role="status"></div>
 
 <script src="split.js"></script>
+<script src="follow.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

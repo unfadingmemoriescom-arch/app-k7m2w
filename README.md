@@ -20,8 +20,8 @@ Then open http://localhost:8765/ (microphone works on localhost in desktop brows
 
 ## Steps
 1. One-line view + sermon library + mic check (done 2026-11-14)
-2. Replay test over a rehearsal transcript, tune the follower on the Mac
-3. Live voice following on the phone (tap always overrides)
+2. Replay test over a rehearsal transcript, tune the follower on the Mac (done 2026-11-14: `node test/replay.js`)
+3. Live voice following on the phone, tap always overrides (done 2026-11-14; `follow.js`)
 4. Practice mode (plays the sermon audio and moves the lines with it)
 5. Church hardening
 

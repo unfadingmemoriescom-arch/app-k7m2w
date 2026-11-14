@@ -205,8 +205,16 @@
       return ev;
     }
 
+    // Live recognition revises its last few words. Drop heard tokens back to `len` (never below what
+    // already triggered a move; a move is never undone, a tap fixes it).
+    function truncate(len) {
+      const keep = Math.max(st.consumed, Math.min(len, st.heard.length));
+      st.heard.length = keep; st.times.length = keep;
+    }
+
     return {
-      push, setIndex,
+      push, setIndex, truncate,
+      get heardLength() { return st.heard.length; },
       get index() { return st.i; },
       get events() { return st.events; },
       cfg, tokensOf: k => L[k]

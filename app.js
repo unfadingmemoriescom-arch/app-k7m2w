@@ -3,7 +3,7 @@
    the word stream it will need. */
 (function () {
   'use strict';
-  const VERSION = 'Preaching View 0.1 (step 1, 2026-11-14)';
+  const VERSION = 'Preaching View 0.3 (step 3: voice following, 2026-11-14)';
   const $ = id => document.getElementById(id);
   const now = () => performance.now();
 
@@ -34,6 +34,8 @@
   };
   let lib = store.get('pv.sermons', []);
   let sermon = null, L = [], i = 0;
+  let fol = null;                 // the voice follower for the current sermon
+  const followLog = [];           // last voice moves, for the Mic check screen
   let scale = parseFloat(store.get('pv.scale', 1)) || 1;
 
   function useSermon(s, startAt) {
@@ -41,6 +43,7 @@
     const saved = store.get('pv.pos.' + s.id, 0);
     i = Math.min(L.length - 1, Math.max(0, startAt != null ? startAt : (parseInt(saved, 10) || 0)));
     if (s.id !== 'sample') store.set('pv.active', s.id);
+    fol = Follower.create(L); fol.setIndex(i); resetFeed();
     buildSections();
     render();
   }
@@ -75,7 +78,8 @@
     store.set('pv.scale', scale);
     $('currentInfo').textContent = sermon.title + ' · ' + L.length + ' lines · line ' + (i + 1) + ' (' + c.s + ')';
   }
-  function go(d) { i = Math.min(L.length - 1, Math.max(0, i + d)); render(); wake(); }
+  function go(d) { i = Math.min(L.length - 1, Math.max(0, i + d)); if (fol) fol.setIndex(i); render(); wake(); }
+  function jumpTo(k) { i = Math.min(L.length - 1, Math.max(0, k)); if (fol) fol.setIndex(i); render(); }
 
   // ---------- keep the screen awake ----------
   let lock = null;
@@ -106,7 +110,7 @@
 
   // ---------- menu ----------
   function openMenu(tab) { $('menu').hidden = false; showTab(tab || 'sections'); }
-  function closeMenu() { $('menu').hidden = true; wake(); }
+  function closeMenu() { $('menu').hidden = true; if (fol) fol.setIndex(i); wake(); }
   function showTab(name) {
     document.querySelectorAll('.tabs [role=tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
     ['sections', 'sermon', 'mic', 'help'].forEach(t => { $('pane-' + t).hidden = t !== name; });
@@ -127,7 +131,7 @@
       const li = document.createElement('li'); const b = document.createElement('button'); b.className = 'row';
       if (i >= k && i < end) b.classList.add('current');
       b.innerHTML = '<span></span><small>' + (end - k) + ' lines</small>'; b.firstChild.textContent = name;
-      b.addEventListener('click', () => { i = k; closeMenu(); render(); });
+      b.addEventListener('click', () => { jumpTo(k); closeMenu(); });
       li.appendChild(b); ol.appendChild(li);
     });
   }
@@ -145,7 +149,7 @@
     });
     $('currentInfo').textContent = sermon.title + ' · ' + L.length + ' lines · line ' + (i + 1);
   }
-  $('restart').addEventListener('click', () => { i = 0; render(); closeMenu(); });
+  $('restart').addEventListener('click', () => { jumpTo(0); closeMenu(); });
   $('addPaste').addEventListener('click', () => {
     const txt = $('paste').value; if (!txt.trim()) { toast('Paste the sermon text first'); return; }
     try { addSermon(txt, $('newName').value.trim() || undefined); $('paste').value = ''; $('newName').value = ''; closeMenu(); }
@@ -166,7 +170,9 @@
     if (!j) return; const b = $('serverLoad'); b.hidden = false;
     b.addEventListener('click', () => { try { addSermon(j, 'Jesus Sees You'); closeMenu(); } catch (e) { toast(e.message); } });
   }).catch(() => {});
-  $('resetPlace').addEventListener('click', () => { i = 0; render(); toast('Back to line 1'); });
+  $('resetPlace').addEventListener('click', () => { jumpTo(0); toast('Back to line 1'); });
+  $('followOn').checked = store.get('pv.follow', true);
+  $('followOn').addEventListener('change', () => { store.set('pv.follow', $('followOn').checked); resetFeed(); renderMic(); });
   $('showHeard').checked = store.get('pv.showHeard', true);
   $('heard').hidden = !$('showHeard').checked;
   $('showHeard').addEventListener('change', () => { store.set('pv.showHeard', $('showHeard').checked); $('heard').hidden = !$('showHeard').checked; });
@@ -235,7 +241,36 @@
     },
     clear() { this.words.length = 0; this.sessionBase = 0; }
   };
-  listener.onChange = () => { renderMic(); renderDiag(); };
+  // ---------- feeding heard words to the follower ----------
+  // Words [fedBase, fedBase + fedN) of listener.words have been fed. Live recognition revises its last
+  // few words, so each time we compare what we fed with what is there now and roll back the difference.
+  let fedBase = 0, fedN = 0, fedW = [], tokEnd = [];
+  function resetFeed() { fedBase = listener.words.length; fedN = 0; fedW = []; tokEnd = []; }
+  const followOn = () => $('followOn').checked;
+  function feedFollower() {
+    if (!fol) return;
+    const W = listener.words;
+    if (!followOn() || W.length < fedBase) { resetFeed(); return; }
+    const have = W.length - fedBase;
+    let m = Math.max(0, fedN - 60);
+    while (m < fedN && m < have && fedW[m] === W[fedBase + m].w) m++;
+    if (m < fedN) { fol.truncate(m > 0 ? tokEnd[m - 1] : 0); fedN = m; fedW.length = m; tokEnd.length = m; }
+    for (let k = fedN; k < have; k++) {
+      const x = W[fedBase + k];
+      const ev = fol.push(x.w, x.t / 1000);
+      fedW[k] = x.w; tokEnd[k] = fol.heardLength; fedN = k + 1;
+      if (ev) onVoiceMove(ev, x.w);
+    }
+  }
+  function onVoiceMove(ev, word) {
+    const to = fol.index;
+    followLog.push({ at: new Date().toLocaleTimeString(), type: ev.type, from: ev.from, to, word });
+    if (followLog.length > 40) followLog.shift();
+    if (to !== i) { i = to; render(); flashMoved(); }
+  }
+  let flashT = 0;
+  function flashMoved() { $('mic').classList.add('moved'); clearTimeout(flashT); flashT = setTimeout(() => $('mic').classList.remove('moved'), 350); }
+  listener.onChange = () => { feedFollower(); renderMic(); renderDiag(); };
 
   function micState() {
     if (listener.state === 'listening' && now() - listener.stats.lastResult > 8000) return 'quiet';
@@ -246,7 +281,7 @@
     const st = micState();
     $('mic').className = 'mic ' + st; $('micLabel').textContent = MIC_LABEL[st] || st;
     const on = listener.want;
-    $('listen').classList.toggle('on', on); $('listen').setAttribute('aria-pressed', String(on)); $('listen').textContent = on ? 'Listening' : 'Listen';
+    $('listen').classList.toggle('on', on); $('listen').setAttribute('aria-pressed', String(on)); $('listen').textContent = on ? (followOn() ? 'Following' : 'Listening') : 'Listen';
     $('micToggle').textContent = on ? 'Stop' : 'Start';
     const last = listener.words.slice(-10).map(x => x.w).join(' ');
     $('heardText').textContent = last;
@@ -257,6 +292,7 @@
       tr.scrollTop = tr.scrollHeight;
     }
   }
+  function fmtMove(m) { return m.at + ' ' + m.type + ' ' + (m.from + 1) + ' \u2192 ' + (m.to + 1) + ' on "' + m.word + '": ' + (L[m.to] ? L[m.to].t : ''); }
   function fmt(ms) { return ms >= 60000 ? Math.floor(ms / 60000) + 'm ' + Math.round(ms % 60000 / 1000) + 's' : (ms / 1000).toFixed(1) + 's'; }
   function renderDiag() {
     if ($('pane-mic').hidden) return;
@@ -275,22 +311,27 @@
       'Result updates: ' + s.results + '   Words heard: ' + listener.words.length,
       'Longest quiet stretch while on: ' + fmt(s.maxQuiet),
       'Errors: ' + (s.errors.length ? s.errors.slice(-8).map(e => e[0] + ' ' + e[1]).join(', ') : 'none'),
+      'Following: ' + (followOn() ? 'on' : 'off') + '   Screen on line ' + (i + 1) + ' of ' + L.length + ': ' + (L[i] ? L[i].t : ''),
+      'Voice moves: ' + followLog.length + (followLog.length ? '   last: ' + fmtMove(followLog[followLog.length - 1]) : ''),
       'Last words: ' + listener.words.slice(-25).map(x => x.w).join(' ')
     ];
     $('diag').textContent = lines.join('\n');
+    $('followLog').textContent = followLog.length ? followLog.slice(-12).reverse().map(fmtMove).join('\n') : 'No voice moves yet.';
   }
   $('listen').addEventListener('click', () => { if (listener.want) listener.stop(); else { listener.start(); wake(); } });
   $('micToggle').addEventListener('click', () => { if (listener.want) listener.stop(); else { listener.start(); wake(); } });
   $('clearHeard').addEventListener('click', () => { listener.clear(); renderMic(); renderDiag(); });
   $('copyDiag').addEventListener('click', async () => {
     renderDiag();
-    const text = $('diag').textContent + '\n\nAll words heard:\n' + listener.words.map(x => x.w).join(' ');
+    const text = $('diag').textContent + '\n\nVoice moves:\n' + followLog.map(fmtMove).join('\n') + '\n\nAll words heard:\n' + listener.words.map(x => x.w).join(' ');
     try { await navigator.clipboard.writeText(text); toast('Report copied. Paste it to Claude.'); }
     catch (e) { const r = document.createRange(); r.selectNodeContents($('diag')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Select the report and copy it'); }
   });
   setInterval(() => { if (listener.want) { renderMic(); renderDiag(); } }, 1000);
   window.addEventListener('online', renderDiag); window.addEventListener('offline', renderDiag);
-  window.PV = { listener, get lines() { return L; }, get index() { return i; }, go, SermonSplit };
+  // Debug hook: PV.hear('some words') behaves as if the microphone heard them.
+  function hear(text) { const t = now(); String(text).split(/\s+/).filter(Boolean).forEach(w => listener.words.push({ w, t, final: true })); listener.onChange(); }
+  window.PV = { listener, hear, get lines() { return L; }, get index() { return i; }, go, SermonSplit, get follower() { return fol; } };
 
   // ---------- start ----------
   const activeId = store.get('pv.active', null);

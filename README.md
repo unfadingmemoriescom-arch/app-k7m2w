@@ -1,0 +1,29 @@
+# Preaching View (voice-following)
+
+One sermon line at a time on an iPhone or iPad, with the next line small and dim underneath.
+Tap right = next, tap left = back; Bluetooth page-turner / keyboard keys work. Voice following
+(the screen moves when you finish a line) is being built in steps.
+
+## Files
+- `index.html`, `app.js` — the app. Open it over https (GitHub Pages) so the microphone works.
+- `split.js` — turns a pasted manuscript into screen lines (one sentence per line; long sentences split at commas).
+  Headings in CAPITALS become sections. Also used by the test harness in Node.
+- `manifest.webmanifest`, `icon.png` — "Add to Home Screen" support.
+- `sermons/` (not published) — this week's `chunks.json`; `sermons/current.json` is offered by the Sermon tab when the page is served from this Mac.
+- `test/data/` (not published) — rehearsal word timings and the manuscript used to tune the follower.
+
+## Preview on this Mac
+```bash
+python3 -m http.server 8765 --directory ~/sermon-read-along-tools/voice-follow
+```
+Then open http://localhost:8765/ (microphone works on localhost in desktop browsers).
+
+## Steps
+1. One-line view + sermon library + mic check (done 2026-11-14)
+2. Replay test over a rehearsal transcript, tune the follower on the Mac
+3. Live voice following on the phone (tap always overrides)
+4. Practice mode (plays the sermon audio and moves the lines with it)
+5. Church hardening
+
+## License
+Copyright (c) 2026 Bolivar Hiciano. All rights reserved. Not licensed for reuse.

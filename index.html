@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Preaching View">
+<meta name="theme-color" content="#0b0f14">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Preaching View</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Layout: a dark stage. One line huge in the middle, the next line small and dim under it.
+   A thin strip at the top (section, mic state) and a thin bar at the bottom (controls).
+   Deliberately a single dark theme: this is a pulpit screen. */
+:root{
+  --ground:#0b0f14; --panel:#121923; --ink:#f5f1e8; --dim:#8a93a0; --rule:#1f2933;
+  --gold:#e6b450; --sky:#7db4ff; --ok:#5ad38b; --warn:#f0b35a; --bad:#ff6b6b;
+  --face:"Atkinson Hyperlegible",-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --size:clamp(30px,7.2vw,84px);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--face);overflow:hidden;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+[hidden]{display:none!important}
+button{font:inherit;color:var(--ink);background:var(--rule);border:0;border-radius:10px;padding:8px 12px;min-width:44px;min-height:44px;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+button.primary{background:var(--sky);color:#06101c;font-weight:700}
+button.quiet{background:transparent;color:var(--dim)}
+button.danger{color:var(--bad)}
+
+.stage{height:100%;display:grid;grid-template-rows:auto 1fr auto auto;gap:6px;padding-block:8px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);min-width:0;min-height:24px}
+.sec{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.sec.changed{color:var(--sky)}
+.right{display:flex;align-items:center;gap:14px;white-space:nowrap}
+.tag{font-weight:700;color:var(--gold)}
+.mic{display:inline-flex;align-items:center;gap:7px}
+.dot{width:10px;height:10px;border-radius:50%;border:2px solid var(--dim);background:transparent;flex:none}
+.mic.listening .dot{background:var(--ok);border-color:var(--ok);animation:pulse 1.6s ease-in-out infinite}
+.mic.quiet .dot{background:var(--warn);border-color:var(--warn)}
+.mic.restarting .dot{background:transparent;border-color:var(--warn);animation:pulse .5s ease-in-out infinite}
+.mic.blocked .dot,.mic.unsupported .dot{background:var(--bad);border-color:var(--bad)}
+.mic.listening{color:var(--ok)}
+.mic.quiet,.mic.restarting{color:var(--warn)}
+.mic.blocked,.mic.unsupported{color:var(--bad)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+.field{display:flex;flex-direction:column;justify-content:center;gap:clamp(14px,3vh,34px);min-height:0;max-width:1100px;width:100%;margin:0 auto;cursor:pointer}
+.para{height:4px;width:46px;border-radius:2px;background:var(--sky);opacity:0;transition:opacity .15s}
+.para.on{opacity:.9}
+.now{font-size:var(--size);line-height:1.18;font-weight:700;text-wrap:balance;overflow-wrap:anywhere}
+.now.build{color:var(--gold)}
+.next{font-size:calc(var(--size)*.42);line-height:1.25;color:var(--dim);text-wrap:balance;overflow-wrap:anywhere}
+.next::before{content:"next  ";font-size:.7em;letter-spacing:.1em;text-transform:uppercase;opacity:.7}
+.next.build{color:color-mix(in srgb,var(--gold) 55%,var(--dim))}
+
+.heard{font-size:14px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:clip;direction:rtl;text-align:left;min-height:18px;opacity:.8}
+.heard span{direction:ltr;unicode-bidi:isolate}
+.bar{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:14px;font-variant-numeric:tabular-nums}
+.track{flex:1;height:4px;background:var(--rule);border-radius:2px;overflow:hidden;min-width:30px}
+.fill{height:100%;background:var(--sky);width:0}
+#listen.on{background:var(--ok);color:#06140b;font-weight:700}
+
+/* Menu overlay */
+.menu{position:fixed;inset:0;background:var(--ground);display:flex;flex-direction:column;
+  padding:calc(10px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));z-index:5}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tabs button{background:transparent;color:var(--dim);border-radius:10px}
+.tabs button[aria-selected="true"]{background:var(--rule);color:var(--ink)}
+.tabs .close{margin-left:auto;background:var(--sky);color:#06101c;font-weight:700}
+.pane{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding-block:14px;min-height:0;-webkit-user-select:text;user-select:text}
+.pane h2{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:18px 0 10px}
+.pane h2:first-child{margin-top:0}
+.pane p,.pane li{font-size:16px;line-height:1.5;max-width:60ch}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.list li{display:flex;gap:8px;align-items:stretch}
+.list li button.row{flex:1;text-align:left;font-size:18px;padding:12px 14px;display:flex;justify-content:space-between;gap:10px;align-items:center}
+.list li button.row.current{outline:2px solid var(--sky)}
+.list li button.row small{color:var(--dim);font-size:13px;white-space:nowrap}
+textarea,input[type=text]{width:100%;max-width:60ch;font:inherit;font-size:16px;color:var(--ink);background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:10px;-webkit-user-select:text;user-select:text}
+textarea{min-height:140px;resize:vertical}
+.row2{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.filebtn{position:relative;overflow:hidden;display:inline-flex;align-items:center}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:100px}
+pre.diag{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:12px;font:13px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-width:70ch;-webkit-user-select:text;user-select:text}
+.transcript{background:var(--panel);border:1px solid var(--rule);border-radius:10px;padding:12px;font-size:16px;line-height:1.5;max-width:70ch;min-height:60px;max-height:40vh;overflow:auto}
+.transcript .final{color:var(--ink)}
+.transcript .interim{color:var(--dim)}
+label.check{display:flex;gap:10px;align-items:center;font-size:16px;margin:8px 0}
+.toast{position:fixed;left:50%;bottom:calc(70px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--panel);color:var(--ink);border:1px solid var(--rule);border-radius:10px;padding:10px 14px;font-size:15px;z-index:9;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.para,.toast{transition:none}.mic .dot{animation:none}}
+@media (max-width:420px){.bar{gap:6px}.bar button{padding:8px 10px}.hide-narrow{display:none}}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="top">
+    <span class="sec" id="sec">Preaching View</span>
+    <span class="right">
+      <span class="tag" id="tag"></span>
+      <span class="mic" id="mic"><span class="dot"></span><span id="micLabel">Mic off</span></span>
+    </span>
+  </div>
+  <div class="field" id="field" aria-live="polite">
+    <div class="para" id="para"></div>
+    <div class="now" id="now"></div>
+    <div class="next" id="next"></div>
+  </div>
+  <div class="heard" id="heard"><span id="heardText"></span></div>
+  <div class="bar">
+    <button id="back" aria-label="Previous line">&#8592;</button>
+    <div class="track" aria-hidden="true"><div class="fill" id="fill"></div></div>
+    <span id="pos" class="hide-narrow">1 / 1</span>
+    <button id="smaller" aria-label="Smaller text">A&#8722;</button>
+    <button id="bigger" aria-label="Bigger text">A+</button>
+    <button id="listen" aria-pressed="false">Listen</button>
+    <button id="menuBtn">Menu</button>
+  </div>
+</div>
+
+<div class="menu" id="menu" hidden>
+  <div class="tabs" role="tablist">
+    <button role="tab" data-tab="sections" aria-selected="true">Sections</button>
+    <button role="tab" data-tab="sermon" aria-selected="false">Sermon</button>
+    <button role="tab" data-tab="mic" aria-selected="false">Mic check</button>
+    <button role="tab" data-tab="help" aria-selected="false">Help</button>
+    <button class="close" id="close">Back to my place</button>
+  </div>
+
+  <div class="pane" id="pane-sections">
+    <h2>Jump to a section</h2>
+    <ol class="list" id="secs"></ol>
+  </div>
+
+  <div class="pane" id="pane-sermon" hidden>
+    <h2>Now showing</h2>
+    <p id="currentInfo"></p>
+    <div class="row2">
+      <button id="restart">Start from the top</button>
+      <button id="serverLoad" hidden>Load this week's sermon</button>
+    </div>
+    <h2>Saved on this phone</h2>
+    <ol class="list" id="sermonList"></ol>
+    <h2>Add a sermon</h2>
+    <p>Paste the manuscript below (section headings in CAPITALS become sections), or choose a .txt or .json file.</p>
+    <input type="text" id="newName" placeholder="Name (optional, taken from the first line)">
+    <div class="row2"></div>
+    <textarea id="paste" placeholder="Paste the sermon text here"></textarea>
+    <div class="row2">
+      <button class="primary" id="addPaste">Add pasted text</button>
+      <span class="filebtn"><button>Choose a file</button><input type="file" id="file" accept=".txt,.json,text/plain,application/json"></span>
+    </div>
+  </div>
+
+  <div class="pane" id="pane-mic" hidden>
+    <h2>Does this phone hear me?</h2>
+    <p>Tap <b>Start</b>, say a few sentences from the sermon (names too: Zacchaeus, Jericho, sycamore, El Roi), and watch the words appear. Then tap <b>Copy report</b> and send it to Claude.</p>
+    <div class="row2">
+      <button class="primary" id="micToggle">Start</button>
+      <button id="copyDiag">Copy report</button>
+      <button id="clearHeard">Clear</button>
+    </div>
+    <div class="transcript" id="transcript"></div>
+    <h2>Report</h2>
+    <pre class="diag" id="diag"></pre>
+  </div>
+
+  <div class="pane" id="pane-help" hidden>
+    <h2>How to use it</h2>
+    <p>Tap the right side of the screen for the next line, the left side to go back. A Bluetooth page-turner or keyboard works too (arrow keys, space, Page Up / Page Down).</p>
+    <p>Gold lines are a build. The last line of a build says <b>Land it</b>. A short blue mark above the line means a new paragraph.</p>
+    <p><b>Listen</b> turns the microphone on. In this version it only shows what it hears, so you can check the phone understands you. Following by voice comes in the next step.</p>
+    <p>Your place and text size are remembered on this phone. The screen stays awake while the page is open.</p>
+    <h2>Settings</h2>
+    <label class="check"><input type="checkbox" id="showHeard" checked> Show the words it hears under the line</label>
+    <div class="row2"><button id="resetPlace">Forget my place in this sermon</button></div>
+    <p id="version" style="color:var(--dim);font-size:13px"></p>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script src="split.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

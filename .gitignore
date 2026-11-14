@@ -1,0 +1,4 @@
+# Sermon text and rehearsal recordings stay on this Mac; only the app is published.
+sermons/
+test/data/
+.DS_Store

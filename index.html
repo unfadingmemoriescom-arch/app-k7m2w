@@ -67,10 +67,14 @@ button.danger{color:var(--bad)}
 
 .heard{font-size:14px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:clip;direction:rtl;text-align:left;min-height:18px;opacity:.8}
 .heard span{direction:ltr;unicode-bidi:isolate}
-.bar{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:14px;font-variant-numeric:tabular-nums}
+.bar,.pbar{display:flex;align-items:center;gap:8px;color:var(--dim);font-size:14px;font-variant-numeric:tabular-nums}
+.pbar{color:var(--gold)}
+.pbar #pplay{background:var(--gold);color:#1a1200;font-weight:700;min-width:52px}
+.fill.gold{background:var(--gold)}
 .track{flex:1;height:4px;background:var(--rule);border-radius:2px;overflow:hidden;min-width:30px}
 .fill{height:100%;background:var(--sky);width:0}
 #listen.on{background:var(--ok);color:#06140b;font-weight:700}
+#practice.on{background:var(--gold);color:#1a1200;font-weight:700}
 
 /* Menu overlay */
 .menu{position:fixed;inset:0;background:var(--ground);display:flex;flex-direction:column;
@@ -119,12 +123,19 @@ label.check{display:flex;gap:10px;align-items:center;font-size:16px;margin:8px 0
     <div class="next" id="next"></div>
   </div>
   <div class="heard" id="heard"><span id="heardText"></span></div>
+  <div class="pbar" id="pbar" hidden>
+    <button id="pplay" aria-label="Play or pause">&#9654;</button>
+    <span id="ptime">0:00 / 0:00</span>
+    <div class="track" aria-hidden="true"><div class="fill gold" id="pfill"></div></div>
+    <button id="pstop">Done practicing</button>
+  </div>
   <div class="bar">
     <button id="back" aria-label="Previous line">&#8592;</button>
     <div class="track" aria-hidden="true"><div class="fill" id="fill"></div></div>
     <span id="pos" class="hide-narrow">1 / 1</span>
     <button id="smaller" aria-label="Smaller text">A&#8722;</button>
     <button id="bigger" aria-label="Bigger text">A+</button>
+    <button id="practice" hidden>Practice</button>
     <button id="listen" aria-pressed="false">Listen</button>
     <button id="menuBtn">Menu</button>
   </div>
@@ -150,6 +161,12 @@ label.check{display:flex;gap:10px;align-items:center;font-size:16px;margin:8px 0
     <div class="row2">
       <button id="restart">Start from the top</button>
       <button id="serverLoad" hidden>Load this week's sermon</button>
+    </div>
+    <h2>Practice audio</h2>
+    <p id="audioInfo">This sermon has no audio times yet.</p>
+    <div class="row2">
+      <span class="filebtn"><button>Choose the sermon MP3</button><input type="file" id="audioFile" accept="audio/*,.mp3,.m4a"></span>
+      <button id="forgetAudio" class="quiet danger" hidden>Remove audio</button>
     </div>
     <h2>Saved on this phone</h2>
     <ol class="list" id="sermonList"></ol>
@@ -185,6 +202,7 @@ label.check{display:flex;gap:10px;align-items:center;font-size:16px;margin:8px 0
     <p>Gold lines are a build. The last line of a build says <b>Land it</b>. A short blue mark above the line means a new paragraph.</p>
     <p><b>Listen</b> turns the microphone on and the screen follows your voice: when you finish a line, the next one comes up. If you skip ahead, it finds you within a few lines. If you riff or repeat, it waits. A tap always wins.</p>
     <p>If it ever sits still, tap. If it ever moves wrong, tap back. It never moves backwards by itself.</p>
+    <p><b>Practice</b> plays the sermon audio and moves the lines with it, on this same screen. Tap a side to jump the audio to that line. The microphone is off while practicing. It needs a sermon file with audio times and the MP3 chosen once under Menu, then Sermon.</p>
     <p>Your place and text size are remembered on this phone. The screen stays awake while the page is open.</p>
     <h2>Settings</h2>
     <label class="check"><input type="checkbox" id="followOn" checked> Follow my voice (move the line by itself)</label>

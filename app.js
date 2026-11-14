@@ -3,7 +3,7 @@
    the word stream it will need. */
 (function () {
   'use strict';
-  const VERSION = 'Preaching View 0.3 (step 3: voice following, 2026-11-14)';
+  const VERSION = 'Preaching View 0.4 (step 4: practice mode, 2026-11-14)';
   const $ = id => document.getElementById(id);
   const now = () => performance.now();
 
@@ -44,6 +44,8 @@
     i = Math.min(L.length - 1, Math.max(0, startAt != null ? startAt : (parseInt(saved, 10) || 0)));
     if (s.id !== 'sample') store.set('pv.active', s.id);
     fol = Follower.create(L); fol.setIndex(i); resetFeed();
+    if (practicing) stopPractice();
+    loadAudioFor(s);
     buildSections();
     render();
   }
@@ -78,8 +80,8 @@
     store.set('pv.scale', scale);
     $('currentInfo').textContent = sermon.title + ' · ' + L.length + ' lines · line ' + (i + 1) + ' (' + c.s + ')';
   }
-  function go(d) { i = Math.min(L.length - 1, Math.max(0, i + d)); if (fol) fol.setIndex(i); render(); wake(); }
-  function jumpTo(k) { i = Math.min(L.length - 1, Math.max(0, k)); if (fol) fol.setIndex(i); render(); }
+  function go(d) { i = Math.min(L.length - 1, Math.max(0, i + d)); if (fol) fol.setIndex(i); if (practicing) seekToLine(); render(); wake(); }
+  function jumpTo(k) { i = Math.min(L.length - 1, Math.max(0, k)); if (fol) fol.setIndex(i); if (practicing) seekToLine(); render(); }
 
   // ---------- keep the screen awake ----------
   let lock = null;
@@ -266,6 +268,7 @@
     const to = fol.index;
     followLog.push({ at: new Date().toLocaleTimeString(), type: ev.type, from: ev.from, to, word });
     if (followLog.length > 40) followLog.shift();
+    if (practicing) return;                       // the audio drives the lines while practicing
     if (to !== i) { i = to; render(); flashMoved(); }
   }
   let flashT = 0;
@@ -331,7 +334,77 @@
   window.addEventListener('online', renderDiag); window.addEventListener('offline', renderDiag);
   // Debug hook: PV.hear('some words') behaves as if the microphone heard them.
   function hear(text) { const t = now(); String(text).split(/\s+/).filter(Boolean).forEach(w => listener.words.push({ w, t, final: true })); listener.onChange(); }
-  window.PV = { listener, hear, get lines() { return L; }, get index() { return i; }, go, SermonSplit, get follower() { return fol; } };
+
+  // ---------- practice mode: the sermon audio drives the lines ----------
+  const audio = new Audio(); audio.preload = 'auto';
+  let practicing = false, audioUrl = null, audioReady = false, pollT = 0, audioKey = '';
+  const idb = {
+    open() { return new Promise((res, rej) => { const r = indexedDB.open('pv', 1); r.onupgradeneeded = () => r.result.createObjectStore('audio'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); },
+    async get(k) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('audio').objectStore('audio').get(k); t.onsuccess = () => res(t.result); t.onerror = () => rej(t.error); }); },
+    async set(k, v) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('audio', 'readwrite'); t.objectStore('audio').put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); },
+    async del(k) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('audio', 'readwrite'); t.objectStore('audio').delete(k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); }
+  };
+  const hasTimes = () => L.some(l => l.a1 != null);
+  const keyFor = s => 'audio:' + String(s.title || s.id).toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const clock = t => { t = Math.max(0, Math.floor(t || 0)); return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
+  async function loadAudioFor(s) {
+    audioKey = keyFor(s); audioReady = false;
+    if (audioUrl) { URL.revokeObjectURL(audioUrl); audioUrl = null; }
+    audio.removeAttribute('src'); audio.load();
+    try { const b = await idb.get(audioKey); if (b && audioKey === keyFor(s)) { audioUrl = URL.createObjectURL(b); audio.src = audioUrl; audioReady = true; } } catch (e) {}
+    renderPractice();
+  }
+  function renderPractice() {
+    $('practice').hidden = !hasTimes();
+    $('forgetAudio').hidden = !audioReady;
+    $('audioInfo').textContent = !hasTimes() ? 'This sermon file has no audio times, so Practice is off for it.'
+      : audioReady ? 'Audio is saved on this phone' + (audio.duration ? ' (' + clock(audio.duration) + ')' : '') + '. Tap Practice on the main screen.'
+      : 'This sermon has audio times. Choose its MP3 once; it stays on this phone.';
+  }
+  audio.addEventListener('loadedmetadata', renderPractice);
+  $('audioFile').addEventListener('change', async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try { await idb.set(audioKey, f); toast('Audio saved (' + Math.round(f.size / 1048576) + ' MB)'); await loadAudioFor(sermon); }
+    catch (err) { toast('Could not save the audio: ' + err.message); }
+    e.target.value = '';
+  });
+  $('forgetAudio').addEventListener('click', async () => { try { await idb.del(audioKey); } catch (e) {} await loadAudioFor(sermon); });
+  function lineAt(t) {
+    // the line whose audio span holds time t; lines without times inherit their neighbours
+    let lo = 0, hi = L.length - 1;
+    while (lo < hi) { const mid = (lo + hi + 1) >> 1; if ((L[mid].a0 != null ? L[mid].a0 : -1) <= t) lo = mid; else hi = mid - 1; }
+    return lo;
+  }
+  function seekToLine() { const l = L[i]; if (l && l.a0 != null) { try { audio.currentTime = l.a0 + 0.01; } catch (e) {} } }
+  function startPractice() {
+    if (!hasTimes()) { toast('This sermon file has no audio times'); return; }
+    if (!audioReady) { openMenu('sermon'); toast('Choose the sermon MP3 first'); return; }
+    if (listener.want) { listener.stop(); toast('Mic off while practicing'); }
+    practicing = true; $('pbar').hidden = false; $('heard').hidden = true; $('practice').classList.add('on');
+    seekToLine();
+    audio.play().catch(e => toast('Could not play: ' + e.message));
+    clearInterval(pollT); pollT = setInterval(tickPractice, 120);
+    wake();
+  }
+  function stopPractice() {
+    practicing = false; clearInterval(pollT); audio.pause();
+    $('pbar').hidden = true; $('heard').hidden = !$('showHeard').checked; $('practice').classList.remove('on');
+    if (fol) fol.setIndex(i);
+  }
+  function tickPractice() {
+    const t = audio.currentTime;
+    const k = lineAt(t);
+    if (k !== i) { i = k; render(); }
+    $('ptime').textContent = clock(t) + ' / ' + clock(audio.duration);
+    $('pfill').style.width = (audio.duration ? t / audio.duration * 100 : 0) + '%';
+    $('pplay').innerHTML = audio.paused ? '&#9654;' : '&#10074;&#10074;';
+  }
+  audio.addEventListener('ended', () => { if (practicing) { stopPractice(); toast('End of the audio'); } });
+  $('practice').addEventListener('click', () => { if (practicing) stopPractice(); else startPractice(); });
+  $('pplay').addEventListener('click', () => { if (audio.paused) audio.play().catch(() => {}); else audio.pause(); });
+  $('pstop').addEventListener('click', stopPractice);
+
+  window.PV = { listener, hear, audio, get practicing() { return practicing; }, get lines() { return L; }, get index() { return i; }, go, SermonSplit, get follower() { return fol; } };
 
   // ---------- start ----------
   const activeId = store.get('pv.active', null);

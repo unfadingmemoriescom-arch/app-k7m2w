@@ -3,7 +3,7 @@
    the word stream it will need. */
 (function () {
   'use strict';
-  const VERSION = 'Preaching View 0.4.1 (tuned from Test 2, 2026-11-15)';
+  const VERSION = 'Preaching View 0.4.2 (bigger next line on phones, 2026-11-15)';
   const $ = id => document.getElementById(id);
   const now = () => performance.now();
 
@@ -76,6 +76,7 @@
     $('pos').textContent = (i + 1) + ' / ' + L.length;
     $('fill').style.width = ((i + 1) / L.length * 100) + '%';
     document.documentElement.style.setProperty('--size', 'clamp(' + Math.round(30 * scale) + 'px,' + (7.2 * scale).toFixed(2) + 'vw,' + Math.round(84 * scale) + 'px)');
+    document.documentElement.style.setProperty('--nextmin', Math.round(22 * scale) + 'px');
     if (sermon && sermon.id !== 'sample') store.set('pv.pos.' + sermon.id, i);
     store.set('pv.scale', scale);
     $('currentInfo').textContent = sermon.title + ' · ' + L.length + ' lines · line ' + (i + 1) + ' (' + c.s + ')';

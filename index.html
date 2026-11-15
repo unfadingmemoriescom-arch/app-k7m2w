@@ -61,7 +61,7 @@ button.danger{color:var(--bad)}
 .para.on{opacity:.9}
 .now{font-size:var(--size);line-height:1.18;font-weight:700;text-wrap:balance;overflow-wrap:anywhere}
 .now.build{color:var(--gold)}
-.next{font-size:calc(var(--size)*.42);line-height:1.25;color:var(--dim);text-wrap:balance;overflow-wrap:anywhere}
+.next{font-size:max(calc(var(--size)*.42),var(--nextmin,22px));line-height:1.25;color:var(--dim);text-wrap:balance;overflow-wrap:anywhere}
 .next::before{content:"next  ";font-size:.7em;letter-spacing:.1em;text-transform:uppercase;opacity:.7}
 .next.build{color:color-mix(in srgb,var(--gold) 55%,var(--dim))}
 

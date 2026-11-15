@@ -3,7 +3,7 @@
    the word stream it will need. */
 (function () {
   'use strict';
-  const VERSION = 'Preaching View 0.4.2 (bigger next line on phones, 2026-11-15)';
+  const VERSION = 'Preaching View 0.4.3 (bigger next line on phones, 2026-11-15)';
   const $ = id => document.getElementById(id);
   const now = () => performance.now();
 

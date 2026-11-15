@@ -20,6 +20,9 @@ Tap right = next, tap left = back; Bluetooth page-turner / keyboard keys work. V
 2. `python3 tools/add_times.py <chunks.json> <build folder> v3 sermons/current.json <audio seconds>` → sermon JSON with practice times.
 3. AirDrop that JSON and the MP3 to the phone. In the page: Menu → Sermon → Choose a file (the JSON), then Choose the sermon MP3.
 
+## Releasing a change
+Bump the version string in `app.js` AND the `?v=` on the three `<script>` tags in `index.html` (Safari on the phone caches each file for 10 minutes; the new `?v=` makes it fetch fresh scripts as soon as it sees the new page). Then commit and push; GitHub Pages updates in about a minute.
+
 ## Preview on this Mac
 ```bash
 python3 -m http.server 8765 --directory ~/sermon-read-along-tools/voice-follow

@@ -49,10 +49,10 @@ button.danger{color:var(--bad)}
 .mic.listening .dot{background:var(--ok);border-color:var(--ok);animation:pulse 1.6s ease-in-out infinite}
 .mic.quiet .dot{background:var(--warn);border-color:var(--warn)}
 .mic.restarting .dot{background:transparent;border-color:var(--warn);animation:pulse .5s ease-in-out infinite}
-.mic.blocked .dot,.mic.unsupported .dot{background:var(--bad);border-color:var(--bad)}
+.mic.blocked .dot,.mic.unsupported .dot,.mic.stalled .dot{background:var(--bad);border-color:var(--bad)}
 .mic.listening{color:var(--ok)}
 .mic.quiet,.mic.restarting{color:var(--warn)}
-.mic.blocked,.mic.unsupported{color:var(--bad)}
+.mic.blocked,.mic.unsupported,.mic.stalled{color:var(--bad)}
 .mic.moved .dot{box-shadow:0 0 0 6px color-mix(in srgb,var(--ok) 35%,transparent)}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 
@@ -213,8 +213,8 @@ label.check{display:flex;gap:10px;align-items:center;font-size:16px;margin:8px 0
 </div>
 <div class="toast" id="toast" role="status"></div>
 
-<script src="split.js?v=0.4.3"></script>
-<script src="follow.js?v=0.4.3"></script>
-<script src="app.js?v=0.4.3"></script>
+<script src="split.js?v=0.4.4"></script>
+<script src="follow.js?v=0.4.4"></script>
+<script src="app.js?v=0.4.4"></script>
 </body>
 </html>

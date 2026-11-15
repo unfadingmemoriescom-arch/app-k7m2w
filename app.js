@@ -3,7 +3,7 @@
    the word stream it will need. */
 (function () {
   'use strict';
-  const VERSION = 'Preaching View 0.4.3 (bigger next line on phones, 2026-11-15)';
+  const VERSION = 'Preaching View 0.4.4 (mic-not-answering message, 2026-11-15)';
   const $ = id => document.getElementById(id);
   const now = () => performance.now();
 
@@ -231,6 +231,13 @@
         else { if (this.state !== 'blocked') this.state = 'off'; this.onChange(); }
       };
       try { r.start(); } catch (e) { this.stats.errors.push([new Date().toLocaleTimeString(), 'start: ' + e.message]); this.onChange(); }
+      // The phone never answered (seen when opened from the home-screen icon): say so instead of showing "Starting" forever.
+      setTimeout(() => {
+        if (this.rec !== r || this.state !== 'starting') return;
+        this.state = 'stalled'; this.stats.errors.push([new Date().toLocaleTimeString(), 'no answer from the microphone in 6s']); this.onChange();
+        const home = !!navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+        toast(home ? 'The phone is not giving this app the microphone. Open the same link in Safari instead.' : 'The phone is not giving the microphone. Check Settings > Safari > Microphone.');
+      }, 6000);
     },
     // Replace this session's words with the recognizer's latest full text, keeping first-seen times.
     _reconcile(txt, finalWords) {
@@ -280,7 +287,7 @@
     if (listener.state === 'listening' && now() - listener.stats.lastResult > 8000) return 'quiet';
     return listener.state;
   }
-  const MIC_LABEL = { off: 'Mic off', starting: 'Starting…', listening: 'Listening', quiet: 'Listening (quiet)', restarting: 'Restarting…', blocked: 'Mic blocked', unsupported: 'No mic in this browser' };
+  const MIC_LABEL = { off: 'Mic off', starting: 'Starting…', listening: 'Listening', quiet: 'Listening (quiet)', restarting: 'Restarting…', blocked: 'Mic blocked', stalled: 'Mic not answering', unsupported: 'No mic in this browser' };
   function renderMic() {
     const st = micState();
     $('mic').className = 'mic ' + st; $('micLabel').textContent = MIC_LABEL[st] || st;

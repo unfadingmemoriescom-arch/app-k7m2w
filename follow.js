@@ -31,7 +31,7 @@
     // Bible words the recognizer gets wrong -> what the script says
     zakiya: 'zacchaeus', zaccheus: 'zacchaeus', zacheus: 'zacchaeus', zakias: 'zacchaeus', zakeus: 'zacchaeus', zacchaeuss: 'zacchaeus', kiss: 'zacchaeus', zakia: 'zacchaeus',
     pagar: 'hagar', begin: 'start', begins: 'starts', began: 'started', beginning: 'starting',
-    elroy: 'elroi', roi: 'elroi', roy: 'elroi', jerico: 'jericho', sicamore: 'sycamore', sickamore: 'sycamore', abram: 'abraham'
+    elroy: 'elroi', eloi: 'elroi', roi: 'elroi', roy: 'elroi', jerico: 'jericho', sicamore: 'sycamore', sickamore: 'sycamore', abram: 'abraham'
   };
   const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
   const TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];

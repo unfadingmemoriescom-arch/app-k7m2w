@@ -3,7 +3,7 @@
    the word stream it will need. */
 (function () {
   'use strict';
-  const VERSION = 'Preaching View 0.4.5 (waiting-for-mic message, 2026-11-15)';
+  const VERSION = 'Preaching View 0.4.6 (taps show in the report, 2026-11-15)';
   const $ = id => document.getElementById(id);
   const now = () => performance.now();
 
@@ -81,8 +81,9 @@
     store.set('pv.scale', scale);
     $('currentInfo').textContent = sermon.title + ' · ' + L.length + ' lines · line ' + (i + 1) + ' (' + c.s + ')';
   }
-  function go(d) { i = Math.min(L.length - 1, Math.max(0, i + d)); if (fol) fol.setIndex(i); if (practicing) seekToLine(); render(); wake(); }
-  function jumpTo(k) { i = Math.min(L.length - 1, Math.max(0, k)); if (fol) fol.setIndex(i); if (practicing) seekToLine(); render(); }
+  function logHand(type, from, to) { if (from === to) return; followLog.push({ at: new Date().toLocaleTimeString(), type, from, to, word: '' }); if (followLog.length > 60) followLog.shift(); }
+  function go(d) { const from = i; i = Math.min(L.length - 1, Math.max(0, i + d)); logHand('tap', from, i); if (fol) fol.setIndex(i); if (practicing) seekToLine(); render(); wake(); }
+  function jumpTo(k) { const from = i; i = Math.min(L.length - 1, Math.max(0, k)); logHand('menu', from, i); if (fol) fol.setIndex(i); if (practicing) seekToLine(); render(); }
 
   // ---------- keep the screen awake ----------
   let lock = null;
@@ -274,7 +275,7 @@
   function onVoiceMove(ev, word) {
     const to = fol.index;
     followLog.push({ at: new Date().toLocaleTimeString(), type: ev.type, from: ev.from, to, word });
-    if (followLog.length > 40) followLog.shift();
+    if (followLog.length > 60) followLog.shift();
     if (practicing) return;                       // the audio drives the lines while practicing
     if (to !== i) { i = to; render(); flashMoved(); }
   }
@@ -302,7 +303,7 @@
       tr.scrollTop = tr.scrollHeight;
     }
   }
-  function fmtMove(m) { return m.at + ' ' + m.type + ' ' + (m.from + 1) + ' \u2192 ' + (m.to + 1) + ' on "' + m.word + '": ' + (L[m.to] ? L[m.to].t : ''); }
+  function fmtMove(m) { return m.at + ' ' + m.type + ' ' + (m.from + 1) + ' \u2192 ' + (m.to + 1) + (m.word ? ' on "' + m.word + '"' : '') + ': ' + (L[m.to] ? L[m.to].t : ''); }
   function fmt(ms) { return ms >= 60000 ? Math.floor(ms / 60000) + 'm ' + Math.round(ms % 60000 / 1000) + 's' : (ms / 1000).toFixed(1) + 's'; }
   function renderDiag() {
     if ($('pane-mic').hidden) return;
@@ -322,7 +323,7 @@
       'Longest quiet stretch while on: ' + fmt(s.maxQuiet),
       'Errors: ' + (s.errors.length ? s.errors.slice(-8).map(e => e[0] + ' ' + e[1]).join(', ') : 'none'),
       'Following: ' + (followOn() ? 'on' : 'off') + '   Screen on line ' + (i + 1) + ' of ' + L.length + ': ' + (L[i] ? L[i].t : ''),
-      'Voice moves: ' + followLog.length + (followLog.length ? '   last: ' + fmtMove(followLog[followLog.length - 1]) : ''),
+      'Moves (voice, tap, menu): ' + followLog.length + (followLog.length ? '   last: ' + fmtMove(followLog[followLog.length - 1]) : ''),
       'Last words: ' + listener.words.slice(-25).map(x => x.w).join(' ')
     ];
     $('diag').textContent = lines.join('\n');
@@ -333,7 +334,7 @@
   $('clearHeard').addEventListener('click', () => { listener.clear(); renderMic(); renderDiag(); });
   $('copyDiag').addEventListener('click', async () => {
     renderDiag();
-    const text = $('diag').textContent + '\n\nVoice moves:\n' + followLog.map(fmtMove).join('\n') + '\n\nAll words heard:\n' + listener.words.map(x => x.w).join(' ');
+    const text = $('diag').textContent + '\n\nMoves:\n' + followLog.map(fmtMove).join('\n') + '\n\nAll words heard:\n' + listener.words.map(x => x.w).join(' ');
     try { await navigator.clipboard.writeText(text); toast('Report copied. Paste it to Claude.'); }
     catch (e) { const r = document.createRange(); r.selectNodeContents($('diag')); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('Select the report and copy it'); }
   });

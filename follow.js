@@ -29,7 +29,8 @@
     someone: 'somebody', everyone: 'everybody', anyone: 'anybody', noone: 'nobody', yeah: 'yes', yep: 'yes',
     tryin: 'trying', nothin: 'nothing', somethin: 'something', christ: 'jesus',
     // Bible words the recognizer gets wrong -> what the script says
-    zakiya: 'zacchaeus', zaccheus: 'zacchaeus', zacheus: 'zacchaeus', zakias: 'zacchaeus', zakeus: 'zacchaeus', zacchaeuss: 'zacchaeus',
+    zakiya: 'zacchaeus', zaccheus: 'zacchaeus', zacheus: 'zacchaeus', zakias: 'zacchaeus', zakeus: 'zacchaeus', zacchaeuss: 'zacchaeus', kiss: 'zacchaeus', zakia: 'zacchaeus',
+    pagar: 'hagar', begin: 'start', begins: 'starts', began: 'started', beginning: 'starting',
     elroy: 'elroi', roi: 'elroi', roy: 'elroi', jerico: 'jericho', sicamore: 'sycamore', sickamore: 'sycamore', abram: 'abraham'
   };
   const ONES = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
